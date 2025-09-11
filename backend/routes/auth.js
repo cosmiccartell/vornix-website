@@ -2,7 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import axios from "axios"; // The tool for the live lookup
+import axios from "axios";
 import User from "../models/User.js";
 import PasswordReset from "../models/PasswordReset.js";
 import OTP from "../models/OTP.js";
@@ -11,25 +11,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// This new "smart" function does a LIVE lookup for the Ngrok URL
-async function getPublicUrl() {
-  try {
-    // It asks the running Ngrok program for its current public address
-    const response = await axios.get("http://127.0.0.1:4040/api/tunnels");
-    const httpsTunnel = response.data.tunnels.find(t => t.proto === 'https');
-    if (httpsTunnel) {
-      console.log(`✅ Live Ngrok URL found: ${httpsTunnel.public_url}`);
-      return httpsTunnel.public_url;
-    }
-  } catch (error) {
-    console.warn("⚠️ Could not get Ngrok URL. Is it running?");
-  }
-  // If Ngrok isn't running, it will use this as a safe backup
-  return 'http://localhost:5173';
-}
-
-
-// --- FORGOT PASSWORD (This is the only section that has changed) ---
+// --- THIS SECTION IS NOW FIXED FOR THE LIVE WEBSITE ---
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
@@ -39,15 +21,11 @@ router.post("/forgot-password", async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString("hex");
     await PasswordReset.create({ userId: user._id, token: resetToken });
 
-    // Step 1: Perform a LIVE lookup for the current Ngrok URL
-    const publicUrl = await getPublicUrl();
-    
-    // Step 2: Use that live URL to build the link
-    const resetURL = `${publicUrl}/reset-password/${resetToken}`;
+    // It will now use the FRONTEND_URL you set in Render's environment variables.
+    const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     await sendEmail(
-      user.email,
-      "Password Reset Request",
+      user.email, "Password Reset Request",
       `Click here to reset your password: ${resetURL}`,
       `<p>Click <a href="${resetURL}">here</a> to reset your password.</p>`
     );
@@ -59,8 +37,8 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-
-// --- ALL OTHER SECTIONS ARE THE SAME AS YOUR ORIGINAL FILE ---
+// --- ALL OTHER SECTIONS ARE THE SAME ---
+// (The rest of your original auth.js code is below)
 
 // Register (Send OTP)
 router.post("/send-otp", async (req, res) => {
@@ -94,7 +72,7 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ success: false, message: "OTP has expired. Please request a new OTP." });
     }
     if (otpRecord.otp !== otp) return res.status(400).json({ success: false, message: "Invalid OTP code." });
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
     const newUser = new User({ email, password: hashedPassword, name });
     await newUser.save();
     await OTP.deleteOne({ email });
@@ -122,7 +100,7 @@ router.post("/reset-password/:token", async (req, res) => {
     const { password } = req.body;
     const resetEntry = await PasswordReset.findOne({ token });
     if (!resetEntry) return res.status(400).json({ success: false, message: "Invalid or expired token" });
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
     await User.findByIdAndUpdate(resetEntry.userId, { password: hashedPassword });
     await PasswordReset.deleteOne({ _id: resetEntry._id });
     res.json({ success: true, message: "Password reset successful" });
