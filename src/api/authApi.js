@@ -1,8 +1,10 @@
-// This file will now handle ALL authentication requests correctly.
+// This is the full address of your backend server, which we will set in Vercel.
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+// This file now correctly uses the full address of your live backend.
 export const authApi = {
   login: async (credentials) => {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
@@ -11,7 +13,7 @@ export const authApi = {
   },
 
   sendOTP: async (emailData) => {
-    const response = await fetch('/api/auth/send-otp', {
+    const response = await fetch(`${API_BASE}/api/auth/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emailData),
@@ -20,7 +22,7 @@ export const authApi = {
   },
 
   verifyOTP: async (otpData) => {
-    const response = await fetch('/api/auth/verify-otp', {
+    const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(otpData),
@@ -28,9 +30,8 @@ export const authApi = {
     return response.json();
   },
   
-  // --- NEW FUNCTION ADDED ---
   forgotPassword: async (emailData) => {
-    const response = await fetch('/api/auth/forgot-password', {
+    const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(emailData),
@@ -38,9 +39,8 @@ export const authApi = {
     return response.json();
   },
 
-  // --- NEW FUNCTION ADDED ---
   resetPassword: async (token, passwordData) => {
-    const response = await fetch(`/api/auth/reset-password/${token}`, {
+    const response = await fetch(`${API_BASE}/api/auth/reset-password/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(passwordData),
