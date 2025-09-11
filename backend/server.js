@@ -2,29 +2,33 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-import { networkInterfaces } from "os"; // Import the os module using ES modules syntax
-
+import { networkInterfaces } from "os";
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 
 dotenv.config();
-
 const app = express();
 
-// Middleware - Updated CORS configuration for network access
+// Middleware
 app.use(cors({
-  origin: true, // Allow all origins (for development)
+  origin: true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected: 127.0.0.1"))
-  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
+// --- CHANGE: Improved MongoDB Connection Logic ---
+mongoose.set('strictQuery', true); // Recommended for modern Mongoose
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected Successfully"))
+  .catch((err) => {
+    console.error("❌ Initial MongoDB Connection Error:", err);
+    process.exit(1); // Exit the app if we can't connect at start
+  });
+
+mongoose.connection.on('error', err => {
+  console.error("❌ MongoDB runtime error:", err);
+});
+// --- END OF CHANGE ---
 
 // Routes
 app.get("/", (req, res) => {
@@ -67,13 +71,12 @@ function getLocalIP() {
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
+const HOST = process.env.HOST || '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
   console.log(`✅ Server running on http://${HOST}:${PORT}`);
   console.log(`✅ Local access: http://localhost:${PORT}`);
   
-  // Only try to get local IP if not running on 0.0.0.0
   if (HOST === '0.0.0.0') {
     const localIP = getLocalIP();
     if (localIP !== '0.0.0.0') {

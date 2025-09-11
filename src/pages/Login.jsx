@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import config from '../config'; // Import the config
+import { authApi } from '../api/authApi';
+import { setAuthData } from '../utils/auth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -24,25 +25,12 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
+      // This part is now fixed to work with Ngrok
+      const data = await authApi.login(formData);
 
       if (data.success) {
-        // Save token and user data to localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Dispatch event to notify navbar about login state change
+        setAuthData(data.token, data.user);
         window.dispatchEvent(new Event('authChange'));
-        
-        // Redirect to dashboard
         navigate('/dashboard', { replace: true });
       } else {
         setError(data.message || 'Login failed');
@@ -153,3 +141,4 @@ const Login = () => {
 };
 
 export default Login;
+

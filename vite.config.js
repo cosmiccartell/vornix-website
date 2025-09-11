@@ -5,12 +5,19 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Listen on all addresses
+    host: true, 
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
+    // --- THIS IS THE NEW "GUEST LIST" ---
+    // We are telling the security guard to allow all visitors from Ngrok.
     allowedHosts: [
       'localhost',
-      '.ngrok-free.app', // Allow all ngrok domains
-      '.ngrok.io'        // Allow all ngrok domains (backup)
-    ]
-  }
+      '.ngrok-free.app' // This allows ANY ngrok free domain to connect
+    ],
+  },
 })

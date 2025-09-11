@@ -1,6 +1,8 @@
-// Frontend configuration
+// This file is no longer needed for the API base URL,
+// as the proxy handles it automatically.
+// Leaving it here in case you want to add other frontend configurations later.
 export const config = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+  // apiBaseUrl is now handled by the vite.config.js proxy.
 };
 
 export default config;

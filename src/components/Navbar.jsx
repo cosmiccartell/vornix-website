@@ -4,26 +4,37 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token')); // Check only once on initial load
   const location = useLocation();
-  const navigate = useNavigate(); // âœ… used for redirect on logout
+  const navigate = useNavigate();
 
+  // --- CHANGE: This logic is now much more efficient ---
   useEffect(() => {
+    // This function will run whenever the 'authChange' event happens
+    const handleAuthChange = () => {
+      setIsLoggedIn(!!localStorage.getItem('token'));
+    };
+
+    // Listen for our custom login/logout event
+    window.addEventListener('authChange', handleAuthChange);
+    
+    // For scrolling effect
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
 
-    // âœ… Login check on route change
-    setIsLoggedIn(!!localStorage.getItem('token'));
+    // Clean up the listeners when the component is removed
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []); // The empty array [] means this setup runs only once, which is very efficient.
+  // --- END OF CHANGE ---
 
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [location]);
-
-  // âœ… Logout logic
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setIsLoggedIn(false);
-    navigate('/'); // âœ… client-side redirect
+    window.dispatchEvent(new Event('authChange')); // Tell the Navbar to update
+    navigate('/');
   };
 
   return (

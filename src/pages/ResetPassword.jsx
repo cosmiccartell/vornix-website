@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import config from '../config';
+import { authApi } from '../api/authApi';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -23,23 +23,16 @@ const ResetPassword = () => {
     }
 
     try {
-      const response = await fetch(`${config.apiBaseUrl}/api/auth/reset-password/${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password }),
-      });
-
-      const data = await response.json();
+      // This part is now fixed to work with Ngrok
+      const data = await authApi.resetPassword(token, { password });
 
       if (data.success) {
-        setMessage('Password reset successfully. You can now login with your new password.');
+        setMessage('Password reset successfully. Redirecting to login...');
         setTimeout(() => {
           navigate('/login');
         }, 3000);
       } else {
-        setError(data.message || 'Password reset failed');
+        setError(data.message || 'Password reset failed. The link may have expired.');
       }
     } catch (err) {
       setError('Network error. Please try again.');
@@ -52,7 +45,7 @@ const ResetPassword = () => {
     <div className="min-h-screen bg-[#0a1526] pt-24 pb-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white mb-2">Reset Your Password</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">Set a New Password</h2>
           <p className="text-gray-400">Enter your new password below</p>
         </div>
         
@@ -89,7 +82,7 @@ const ResetPassword = () => {
             
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                Confirm Password
+                Confirm New Password
               </label>
               <input
                 id="confirmPassword"
