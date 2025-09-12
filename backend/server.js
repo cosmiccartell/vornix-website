@@ -2,11 +2,12 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-import { networkInterfaces } from "os";
+import { networkInterfaces } from "os"; // This is from your original file
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 
 dotenv.config();
+
 const app = express();
 
 // Middleware
@@ -16,19 +17,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// --- CHANGE: Improved MongoDB Connection Logic ---
-mongoose.set('strictQuery', true); // Recommended for modern Mongoose
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected Successfully"))
-  .catch((err) => {
-    console.error("❌ Initial MongoDB Connection Error:", err);
-    process.exit(1); // Exit the app if we can't connect at start
-  });
-
-mongoose.connection.on('error', err => {
-  console.error("❌ MongoDB runtime error:", err);
-});
-// --- END OF CHANGE ---
+// MongoDB Connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 // Routes
 app.get("/", (req, res) => {
@@ -38,7 +31,7 @@ app.get("/", (req, res) => {
 // Auth API
 app.use("/api/auth", authRoutes);
 
-// Test Email Route
+// Test Email Route (This is from your original file)
 app.get("/api/test-email", async (req, res) => {
   try {
     await sendEmail(
@@ -54,7 +47,7 @@ app.get("/api/test-email", async (req, res) => {
   }
 });
 
-// Function to get local IP address
+// Function to get local IP address (This is from your original file)
 function getLocalIP() {
   const interfaces = networkInterfaces();
   for (const devName in interfaces) {
