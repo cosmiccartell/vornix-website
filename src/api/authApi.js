@@ -1,7 +1,7 @@
-// This is the full address of your backend server, which we will set in Vercel.
+// This is the full public address of your backend server, which is set in Vercel.
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
-// This file now correctly uses the full address of your live backend.
+// This file now correctly uses the full, live address for every request.
 export const authApi = {
   login: async (credentials) => {
     const response = await fetch(`${API_BASE}/api/auth/login`, {
