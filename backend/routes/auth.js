@@ -11,21 +11,38 @@ import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// --- THIS SECTION IS NOW FIXED FOR THE LIVE WEBSITE ---
+async function getPublicUrl() {
+  try {
+    const response = await axios.get("http://127.0.0.1:4040/api/tunnels");
+    const httpsTunnel = response.data.tunnels.find(t => t.proto === 'https');
+    if (httpsTunnel) {
+      console.log(`✅ Live Ngrok URL found: ${httpsTunnel.public_url}`);
+      return httpsTunnel.public_url;
+    }
+  } catch (error) {
+    console.warn("⚠️ Could not get Ngrok URL. Is it running?");
+  }
+  return 'http://localhost:5173';
+}
+
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ success: false, message: "User not found" });
+    
+    // --- SECURITY UPGRADE 1: Invalidate all old tokens for this user ---
+    await PasswordReset.deleteMany({ userId: user._id });
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     await PasswordReset.create({ userId: user._id, token: resetToken });
-
-    // It will now use the FRONTEND_URL you set in Render's environment variables.
-    const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    
+    const publicUrl = await getPublicUrl();
+    const resetURL = `${publicUrl}/reset-password/${resetToken}`;
 
     await sendEmail(
-      user.email, "Password Reset Request",
+      user.email,
+      "Password Reset Request",
       `Click here to reset your password: ${resetURL}`,
       `<p>Click <a href="${resetURL}">here</a> to reset your password.</p>`
     );
@@ -37,10 +54,29 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-// --- ALL OTHER SECTIONS ARE THE SAME ---
-// (The rest of your original auth.js code is below)
+router.post("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+    const resetEntry = await PasswordReset.findOne({ token });
+    if (!resetEntry) {
+      return res.status(400).json({ success: false, message: "Invalid or expired token" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 12); // Increased security
+    await User.findByIdAndUpdate(resetEntry.userId, { password: hashedPassword });
 
-// Register (Send OTP)
+    // --- SECURITY UPGRADE 2: Invalidate all tokens for this user after success ---
+    await PasswordReset.deleteMany({ userId: resetEntry.userId });
+
+    res.json({ success: true, message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
+// --- ALL OTHER SECTIONS ARE THE SAME AS BEFORE ---
+
 router.post("/send-otp", async (req, res) => {
   try {
     const { email } = req.body;
@@ -61,7 +97,6 @@ router.post("/send-otp", async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 });
 
-// Register (Verify OTP)
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp, password, name } = req.body;
@@ -72,7 +107,7 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ success: false, message: "OTP has expired. Please request a new OTP." });
     }
     if (otpRecord.otp !== otp) return res.status(400).json({ success: false, message: "Invalid OTP code." });
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, 12); // Increased security
     const newUser = new User({ email, password: hashedPassword, name });
     await newUser.save();
     await OTP.deleteOne({ email });
@@ -80,7 +115,6 @@ router.post("/verify-otp", async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 });
 
-// Login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -93,21 +127,6 @@ router.post("/login", async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 });
 
-// Reset Password
-router.post("/reset-password/:token", async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { password } = req.body;
-    const resetEntry = await PasswordReset.findOne({ token });
-    if (!resetEntry) return res.status(400).json({ success: false, message: "Invalid or expired token" });
-    const hashedPassword = await bcrypt.hash(password, 12);
-    await User.findByIdAndUpdate(resetEntry.userId, { password: hashedPassword });
-    await PasswordReset.deleteOne({ _id: resetEntry._id });
-    res.json({ success: true, message: "Password reset successful" });
-  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
-});
-
-// Get Profile
 router.get("/profile", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
