@@ -7,6 +7,7 @@ import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -52,6 +53,9 @@ app.use("/api/auth", authRoutes);
 
 // Admin API
 app.use('/api/admin', adminRoutes);
+
+// Payment API
+app.use('/api/payment', paymentRoutes);
 
 // Public API (for fetching challenges, etc.)
 app.use('/api/public', publicRoutes);
