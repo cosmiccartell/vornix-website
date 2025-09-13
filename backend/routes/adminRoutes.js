@@ -1,20 +1,47 @@
 import express from 'express';
 import Challenge from '../models/Challenge.js';
 import StockAccount from '../models/StockAccount.js';
-import DiscountCode from '../models/DiscountCode.js'; // Import our new model
-import challengeBlueprints from '../config/challengeBlueprints.js'; // Import the blueprints file we will create next
+import DiscountCode from '../models/DiscountCode.js';
+import User from '../models/User.js'; // We need this to count users
+import TraderChallenge from '../models/TraderChallenge.js'; // We need this to count active challenges
+import challengeBlueprints from '../config/challengeBlueprints.js';
 
 const router = express.Router();
 
+// --- NEW: FIRM OVERVIEW STATS ---
+router.get('/overview-stats', async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const activeChallenges = await TraderChallenge.countDocuments({ status: 'active' });
+        const passedChallenges = await TraderChallenge.countDocuments({ status: 'passed' });
+        const failedChallenges = await TraderChallenge.countDocuments({ status: 'failed' });
+        const availableStockAccounts = await StockAccount.countDocuments({ status: 'available' });
+        const assignedStockAccounts = await StockAccount.countDocuments({ status: 'assigned' });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalUsers,
+                activeChallenges,
+                passedChallenges,
+                failedChallenges,
+                availableStockAccounts,
+                assignedStockAccounts,
+                // In the future, we will calculate revenue here
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching overview stats.' });
+    }
+});
+
+
 // --- ONE-TIME SETUP ROUTE ---
-// You will visit this URL ONCE to automatically create all your products.
 router.get('/seed-challenges', async (req, res) => {
     try {
-        // First, delete any old challenge blueprints to avoid duplicates
         await Challenge.deleteMany({});
-        // Then, insert all the new ones from our blueprints file
         await Challenge.insertMany(challengeBlueprints);
-        res.status(200).send('Challenge blueprints have been successfully seeded to the database!');
+        res.status(200).send('Challenge blueprints have been successfully seeded!');
     } catch (error) {
         res.status(500).send(`Error seeding challenges: ${error.message}`);
     }
@@ -28,13 +55,15 @@ router.post('/stock-accounts', async (req, res) => {
         await newStockAccount.save();
         res.status(201).json({ success: true, message: 'Stock account added!', data: newStockAccount });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error adding stock account.', error: error.message });
+        res.status(500).json({ success: false, message: 'Error adding stock account.' });
     }
 });
 
+// UPGRADED: This now includes the user's email for assigned accounts
 router.get('/stock-accounts', async (req, res) => {
     try {
-        const stockAccounts = await StockAccount.find({}).populate('assignedToUser', 'email');
+        // .populate() is like a VLOOKUP in Excel. It finds the user's email.
+        const stockAccounts = await StockAccount.find({}).populate('assignedToUser', 'email name');
         res.status(200).json({ success: true, data: stockAccounts });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching accounts.' });
@@ -43,6 +72,7 @@ router.get('/stock-accounts', async (req, res) => {
 
 
 // --- DISCOUNT CODE MANAGEMENT ---
+// (We will build the form for this in a later step)
 router.post('/discount-codes', async (req, res) => {
     try {
         const newDiscountCode = new DiscountCode(req.body);
