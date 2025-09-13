@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // --- Whiteboard #1: Firm Overview ---
-// This component is simple. It only displays the data it is given by the manager.
+// This component is now "dumber". It only displays the data it is given.
 const FirmOverview = ({ stats, loading }) => {
     if (loading || !stats) {
         return <div className="p-6 bg-[#0f1d34] rounded-xl"><h2 className="text-2xl font-semibold">Loading Firm Overview...</h2></div>;
