@@ -1,5 +1,4 @@
 // This file contains the "products" you sell.
-// It is the single source of truth for your challenges.
 
 const challengeBlueprints = [
   // --- Basic Challenge (News Restricted) ---
