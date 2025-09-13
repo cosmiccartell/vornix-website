@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 
-// --- SPEED UPGRADE: We now load all pages at once for instant navigation ---
 import Home from './pages/Home';
 import Pricing from './pages/Pricing';
 import Challenge from './pages/Challenge';
@@ -15,21 +14,15 @@ import VerifyOTP from './pages/VerifyOTP';
 import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-
-// Loading component is no longer needed between pages, but we keep it for other potential uses
-const Loading = () => (
-  <div className="min-h-screen flex items-center justify-center bg-[#0a1526]">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
-  </div>
-);
+import Admin from './pages/Admin'; // Import the new Admin page
 
 function App() {
   return (
     <Router>
       <Navbar />
       <div className="pt-16">
-        {/* --- SPEED UPGRADE: The <Suspense> wrapper is no longer needed here --- */}
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/challenges" element={<Challenge />} />
@@ -43,6 +36,10 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/faq" element={<FAQ />} />
+
+          {/* This is the new Admin Route */}
+          <Route path="/admin" element={<Admin />} />
+          
           <Route path="*" element={
             <div className="min-h-screen flex items-center justify-center bg-[#0a1526] text-white">
               <h1 className="text-4xl font-bold">404 - Page Not Found</h1>
