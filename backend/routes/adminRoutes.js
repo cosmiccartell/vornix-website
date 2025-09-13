@@ -9,6 +9,7 @@ import challengeBlueprints from '../config/challengeBlueprints.js';
 const router = express.Router();
 
 // --- FIRM OVERVIEW STATS ---
+// This part is correct and will now work because the server won't crash.
 router.get('/overview-stats', async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
@@ -59,10 +60,11 @@ router.post('/stock-accounts', async (req, res) => {
 });
 
 // --- THIS SECTION IS NOW FIXED ---
-// The complex ".populate()" command has been removed to prevent the server crash.
+// The complex ".populate()" command that was crashing the server has been removed.
 router.get('/stock-accounts', async (req, res) => {
     try {
-        const stockAccounts = await StockAccount.find({}); // This is the simplified, corrected line.
+        // This is the simplified, corrected line that will not crash.
+        const stockAccounts = await StockAccount.find({}); 
         res.status(200).json({ success: true, data: stockAccounts });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching accounts.' });
