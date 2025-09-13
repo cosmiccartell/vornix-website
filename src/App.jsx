@@ -14,7 +14,8 @@ import VerifyOTP from './pages/VerifyOTP';
 import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Admin from './pages/Admin'; // Import the new Admin page
+import Admin from './pages/Admin';
+import Checkout from './pages/Checkout'; // Import the new Checkout page
 
 function App() {
   return (
@@ -24,7 +25,6 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/pricing" element={<Pricing />} />
           <Route path="/challenges" element={<Challenge />} />
           <Route path="/about" element={<About />} />
           <Route path="/competitions" element={<Competitions />} />
@@ -37,7 +37,10 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/faq" element={<FAQ />} />
 
-          {/* This is the new Admin Route */}
+          {/* This is the new Checkout Route */}
+          <Route path="/checkout/:challengeId" element={<Checkout />} />
+
+          {/* Admin Route */}
           <Route path="/admin" element={<Admin />} />
           
           <Route path="*" element={
