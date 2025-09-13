@@ -37,7 +37,7 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/faq" element={<FAQ />} />
 
-          {/* This is the new Checkout Route */}
+          {/* This is the new Checkout Route. The :challengeId part is a variable. */}
           <Route path="/checkout/:challengeId" element={<Checkout />} />
 
           {/* Admin Route */}
