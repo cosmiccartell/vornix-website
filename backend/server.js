@@ -2,20 +2,37 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-import { networkInterfaces } from "os"; // This is from your original file
+import { networkInterfaces } from "os";
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
-
 const app = express();
 
-// Middleware
+// --- THE FINAL CORS FIX ---
+// This is the "security guard" for your backend.
+// We are now giving it an explicit guest list.
+const allowedOrigins = [
+  'https://vornix-website.vercel.app', // Your live frontend
+  'http://localhost:5173'             // Your local PC for testing
+];
+
 app.use(cors({
-  origin: true,
+  origin: function (origin, callback) {
+    // If the visitor is on our guest list (or is not a browser), let them in.
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // If they are not on the list, block them.
+      callback(new Error('This visitor is not allowed.'));
+    }
+  },
   credentials: true,
 }));
+// --- END OF FIX ---
+
+
 app.use(express.json());
 
 // MongoDB Connection
@@ -35,23 +52,20 @@ app.use("/api/auth", authRoutes);
 // Admin API
 app.use('/api/admin', adminRoutes);
 
-// Test Email Route (This is from your original file)
+// Test Email Route
 app.get("/api/test-email", async (req, res) => {
   try {
     await sendEmail(
-      "someone@example.com",
-      "Hello from Vornix 🚀",
-      "This is a plain test email.",
+      "someone@example.com", "Hello from Vornix 🚀", "This is a plain test email.",
       "<h2>Hello from <b>Vornix Prop Firm</b> 🚀</h2>"
     );
     res.json({ success: true, message: "✅ Test email sent! Check your inbox." });
   } catch (error) {
-    console.error("❌ Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Function to get local IP address (This is from your original file)
+// Function to get local IP address
 function getLocalIP() {
   const interfaces = networkInterfaces();
   for (const devName in interfaces) {
@@ -73,7 +87,6 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`✅ Server running on http://${HOST}:${PORT}`);
   console.log(`✅ Local access: http://localhost:${PORT}`);
-  
   if (HOST === '0.0.0.0') {
     const localIP = getLocalIP();
     if (localIP !== '0.0.0.0') {
