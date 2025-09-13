@@ -2,13 +2,13 @@ import express from 'express';
 import Challenge from '../models/Challenge.js';
 import StockAccount from '../models/StockAccount.js';
 import DiscountCode from '../models/DiscountCode.js';
-import User from '../models/User.js'; // We need this to count users
-import TraderChallenge from '../models/TraderChallenge.js'; // We need this to count active challenges
+import User from '../models/User.js';
+import TraderChallenge from '../models/TraderChallenge.js';
 import challengeBlueprints from '../config/challengeBlueprints.js';
 
 const router = express.Router();
 
-// --- NEW: FIRM OVERVIEW STATS ---
+// --- FIRM OVERVIEW STATS ---
 router.get('/overview-stats', async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
@@ -27,7 +27,6 @@ router.get('/overview-stats', async (req, res) => {
                 failedChallenges,
                 availableStockAccounts,
                 assignedStockAccounts,
-                // In the future, we will calculate revenue here
             }
         });
     } catch (error) {
@@ -59,11 +58,11 @@ router.post('/stock-accounts', async (req, res) => {
     }
 });
 
-// UPGRADED: This now includes the user's email for assigned accounts
+// --- THIS SECTION IS NOW FIXED ---
+// The complex ".populate()" command has been removed to prevent the server crash.
 router.get('/stock-accounts', async (req, res) => {
     try {
-        // .populate() is like a VLOOKUP in Excel. It finds the user's email.
-        const stockAccounts = await StockAccount.find({}).populate('assignedToUser', 'email name');
+        const stockAccounts = await StockAccount.find({}); // This is the simplified, corrected line.
         res.status(200).json({ success: true, data: stockAccounts });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching accounts.' });
@@ -72,7 +71,6 @@ router.get('/stock-accounts', async (req, res) => {
 
 
 // --- DISCOUNT CODE MANAGEMENT ---
-// (We will build the form for this in a later step)
 router.post('/discount-codes', async (req, res) => {
     try {
         const newDiscountCode = new DiscountCode(req.body);
