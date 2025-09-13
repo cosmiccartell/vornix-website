@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+
+// We no longer need to import Helmet
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -26,11 +27,10 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen text-white font-sans overflow-x-hidden bg-gradient-to-br from-[#0a0f1a] to-[#0f1d34]">
-      <Helmet>
-        <title>Vornix | Global Prop Firm with an Indian Heart</title>
-      </Helmet>
+      {/* This is the new, built-in way to set the page title in React 19 */}
+      <title>Vornix | Global Prop Firm with an Indian Heart</title>
 
-      {/* Navigation */}
+      {/* The rest of your Home page is exactly the same */}
       <nav className="relative z-10 bg-black/30 backdrop-blur-md py-4 px-6 border-b border-gray-800">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center">
@@ -55,7 +55,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="relative px-6 pt-32 pb-20 max-w-7xl mx-auto text-center z-10">
         <div className="relative z-10">
           <div className="inline-flex items-center px-4 py-2 bg-[#00d4ff]/10 rounded-full mb-6 border border-[#00d4ff]/30 backdrop-blur-sm">
@@ -82,7 +81,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mt-16">
             {[
               ['Markets', 'Forex, Crypto, Indices'],
