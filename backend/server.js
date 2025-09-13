@@ -6,15 +6,14 @@ import { networkInterfaces } from "os";
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
-import publicRoutes from './routes/publicRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
+import publicRoutes from './routes/publicRoutes.js'; // Make sure this is imported
 
 dotenv.config();
 const app = express();
 
 // --- THE FINAL CORS FIX ---
 // This is the "security guard" for your backend.
-// We are now giving it an explicit guest list.
+// We are now giving it an explicit guest list for ALL doors.
 const allowedOrigins = [
   'https://vornix-website.vercel.app', // Your live frontend
   'http://localhost:5173'             // Your local PC for testing
@@ -27,7 +26,7 @@ app.use(cors({
       callback(null, true);
     } else {
       // If they are not on the list, block them.
-      callback(new Error('This visitor is not allowed.'));
+      callback(new Error('This visitor is not allowed by CORS.'));
     }
   },
   credentials: true,
@@ -54,10 +53,7 @@ app.use("/api/auth", authRoutes);
 // Admin API
 app.use('/api/admin', adminRoutes);
 
-// Payment API
-app.use('/api/payment', paymentRoutes);
-
-// Public API (for fetching challenges, etc.)
+// Public API
 app.use('/api/public', publicRoutes);
 
 // Test Email Route
