@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // --- Whiteboard #1: Firm Overview ---
-// This component is now "dumber". It only displays the data it is given.
+// This component is simple. It only displays the data it is given by the manager.
 const FirmOverview = ({ stats, loading }) => {
     if (loading || !stats) {
         return <div className="p-6 bg-[#0f1d34] rounded-xl"><h2 className="text-2xl font-semibold">Loading Firm Overview...</h2></div>;
@@ -34,23 +34,11 @@ const FirmOverview = ({ stats, loading }) => {
 
 
 // --- Whiteboard #2: Account Inventory ---
-// This component now has a "red button" (the onAccountAdded function).
-const StockAccountManager = ({ onAccountAdded }) => {
+// This component is also simple. It displays the list the manager gives it,
+// and it has a "red button" (onAccountAdded) to tell the manager when something changes.
+const StockAccountManager = ({ stockAccounts, onAccountAdded, loading }) => {
     const [formData, setFormData] = useState({ mt5Login: '', mt5Password: '', mt5Server: 'Exness-Demo', accountSize: '10000' });
-    const [stockAccounts, setStockAccounts] = useState([]);
     const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(true);
-
-    const fetchStockAccounts = useCallback(async () => {
-        try {
-            const response = await fetch(`${API_BASE}/api/admin/stock-accounts`);
-            const data = await response.json();
-            if (data.success) setStockAccounts(data.data);
-        } catch (error) { console.error("Failed to fetch stock accounts"); }
-        setLoading(false);
-    }, []);
-    
-    useEffect(() => { fetchStockAccounts(); }, [fetchStockAccounts]);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -66,10 +54,7 @@ const StockAccountManager = ({ onAccountAdded }) => {
         if (data.success) {
             setMessage(`Added MT5 Account: ${data.data.mt5Login}`);
             setFormData({ mt5Login: '', mt5Password: '', mt5Server: 'Exness-Demo', accountSize: '10000' });
-            
-            // --- This is the "Red Button" ---
-            // It tells the Office Manager that something changed.
-            onAccountAdded();
+            onAccountAdded(); // Press the "red button" to notify the manager
         } else {
             setMessage(data.message || 'Error adding account.');
         }
@@ -103,33 +88,34 @@ const StockAccountManager = ({ onAccountAdded }) => {
 // --- The Main Admin Page (The "Office Manager") ---
 const Admin = () => {
     const [stats, setStats] = useState(null);
-    const [statsLoading, setStatsLoading] = useState(true);
+    const [stockAccounts, setStockAccounts] = useState([]); // Manager now holds the inventory list
+    const [loading, setLoading] = useState(true);
 
-    // This is the manager's main job: get all the latest data for the office.
+    // The manager's main job: get all the latest data for the entire office.
     const fetchAllData = useCallback(async () => {
-        setStatsLoading(true);
+        setLoading(true);
         try {
-            const statsResponse = await fetch(`${API_BASE}/api/admin/overview-stats`);
-            const statsData = await statsResponse.json();
-            if (statsData.success) {
-                setStats(statsData.data);
-            }
+            // Get both stats and accounts at the same time
+            const [statsRes, accountsRes] = await Promise.all([
+                fetch(`${API_BASE}/api/admin/overview-stats`),
+                fetch(`${API_BASE}/api/admin/stock-accounts`)
+            ]);
+            const statsData = await statsRes.json();
+            const accountsData = await accountsRes.json();
+
+            if (statsData.success) setStats(statsData.data);
+            if (accountsData.success) setStockAccounts(accountsData.data);
+
         } catch (error) {
-            console.error("Failed to fetch data");
+            console.error("Failed to fetch admin data");
         }
-        setStatsLoading(false);
+        setLoading(false);
     }, []);
 
     // The manager gets the data when the office first opens.
     useEffect(() => {
         fetchAllData();
     }, [fetchAllData]);
-
-    // This is the function the manager gives to the workers.
-    // When called, it tells the manager to get fresh data for everyone.
-    const handleDataRefresh = () => {
-        fetchAllData();
-    };
 
     return (
         <div className="min-h-screen bg-[#0a1526] text-white">
@@ -139,12 +125,14 @@ const Admin = () => {
                     <p className="text-gray-400 mt-1">Vornix Firm Overview & Management</p>
                 </div>
                 {/* The manager gives the "Firm Overview" worker the stats data */}
-                <FirmOverview stats={stats} loading={statsLoading} />
+                <FirmOverview stats={stats} loading={loading} />
                 
-                {/* The manager gives the "Inventory" worker the "red button" */}
-                <StockAccountManager onAccountAdded={handleDataRefresh} />
-                
-                {/* We will add the Discount Code component here in a future step */}
+                {/* The manager gives the "Inventory" worker the inventory list AND the "red button" */}
+                <StockAccountManager 
+                    stockAccounts={stockAccounts} 
+                    onAccountAdded={fetchAllData} 
+                    loading={loading} 
+                />
             </div>
         </div>
     );
