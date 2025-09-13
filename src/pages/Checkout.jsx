@@ -13,7 +13,7 @@ const Checkout = () => {
         const fetchChallengeDetails = async () => {
             if (!challengeId) return;
             try {
-                // We need to create this new backend route in our next step
+                // We will build this new backend route in our next step
                 const response = await fetch(`${API_BASE}/api/public/challenges/${challengeId}`);
                 const data = await response.json();
                 if (data.success) {
@@ -41,7 +41,7 @@ const Checkout = () => {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a1526] text-white">
                 <h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1>
-                <p>{error}</p>
+                <p>{error || 'Challenge data could not be loaded.'}</p>
                 <Link to="/challenges" className="mt-6 px-6 py-2 bg-yellow-500 text-black font-bold rounded-lg">
                     Back to Challenges
                 </Link>
@@ -65,25 +65,31 @@ const Checkout = () => {
                             <p className="text-gray-300">{challenge.challengeType} - ${challenge.accountSize.toLocaleString()}</p>
                             <p className="font-bold">${challenge.price.toLocaleString()}</p>
                         </div>
+                        {challenge.priceUpfront && (
+                             <div className="flex justify-between items-center text-sm mt-2 text-gray-400">
+                                <p>Upfront Payment</p>
+                                <p>${challenge.priceUpfront.toLocaleString()}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Discount Code Section (UI Only for now) */}
                     <div className="border-b border-gray-700 pb-6 mb-6">
                          <label className="block text-sm font-medium text-gray-300 mb-2">Discount Code</label>
                          <div className="flex gap-4">
-                            <input type="text" placeholder="Enter code" className="flex-grow bg-[#1e2f4a] p-3 rounded-lg border border-gray-600" />
-                            <button className="px-5 py-2 bg-gray-600 text-white font-bold rounded-lg">Apply</button>
+                            <input type="text" placeholder="Enter code" className="flex-grow bg-[#1e2f4a] p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                            <button className="px-5 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500">Apply</button>
                          </div>
                     </div>
                     
                     {/* Total */}
                     <div className="flex justify-between items-center text-2xl font-bold mb-8">
-                        <p>Total</p>
+                        <p>Total Due Today</p>
                         <p className="text-yellow-400">${finalPrice.toLocaleString()}</p>
                     </div>
 
                     {/* Payment Button */}
-                    <button className="w-full text-center bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold py-4 rounded-lg text-lg">
+                    <button className="w-full text-center bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold py-4 rounded-lg text-lg hover:from-yellow-600 hover:to-yellow-700 transition-all">
                         Proceed to Payment
                     </button>
                     <p className="text-center text-xs text-gray-500 mt-4">
