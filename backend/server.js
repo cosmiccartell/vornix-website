@@ -6,6 +6,7 @@ import { networkInterfaces } from "os";
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -51,6 +52,9 @@ app.use("/api/auth", authRoutes);
 
 // Admin API
 app.use('/api/admin', adminRoutes);
+
+// Public API (for fetching challenges, etc.)
+app.use('/api/public', publicRoutes);
 
 // Test Email Route
 app.get("/api/test-email", async (req, res) => {
