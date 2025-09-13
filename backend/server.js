@@ -6,7 +6,7 @@ import { networkInterfaces } from "os";
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
-import publicRoutes from './routes/publicRoutes.js'; // Make sure this is imported
+import publicRoutes from './routes/publicRoutes.js';
 
 dotenv.config();
 const app = express();
