@@ -1,75 +1,55 @@
 import express from 'express';
 import Challenge from '../models/Challenge.js';
 import StockAccount from '../models/StockAccount.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+// We will add the security guard later. For now, we are building.
 
 const router = express.Router();
 
-// This is a simple "security guard" middleware.
-// It checks if the user is logged in AND has the 'admin' role.
-const isAdmin = (req, res, next) => {
-  // We will get the user info from the token after they log in
-  // For now, this is a placeholder. We will complete this in a later step.
-  // For today, we are just building the engine.
-  next(); // For now, let's allow access to build.
-};
+// --- CHALLENGE MANAGEMENT ---
 
-
-// --- ENGINE PART 1: Create a New Challenge Program ---
-// This will be the logic for the "Add New Challenge" form in your Admin Panel.
-router.post('/challenges', isAdmin, async (req, res) => {
+// Create a New Challenge Blueprint
+router.post('/challenges', async (req, res) => {
   try {
-    const {
-      challengeType,
-      accountSize,
-      price,
-      priceUpfront,
-      priceAfterPass,
-      evaluationStages,
-      profitTargets,
-      dailyDrawdown,
-      maxDrawdown,
-      timeLimitDays,
-      minTradingDays,
-      isNewsTradingAllowed,
-      profitSplit
-    } = req.body;
-
-    const newChallenge = new Challenge({
-      challengeType,
-      accountSize,
-      price,
-      priceUpfront,
-      priceAfterPass,
-      evaluationStages,
-      profitTargets,
-      dailyDrawdown,
-      maxDrawdown,
-      timeLimitDays,
-      minTradingDays,
-      isNewsTradingAllowed,
-      profitSplit,
-    });
-
+    const newChallenge = new Challenge(req.body);
     await newChallenge.save();
-    res.status(201).json({ success: true, message: 'Challenge created successfully', data: newChallenge });
+    res.status(201).json({ success: true, message: 'Challenge blueprint created successfully!', data: newChallenge });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error creating challenge', error: error.message });
+    res.status(500).json({ success: false, message: 'Error creating challenge blueprint.', error: error.message });
   }
 });
 
-
-// --- ENGINE PART 2: Get a List of All Challenge Programs ---
-// This will be used to display all your challenges on your website and in the Admin Panel.
+// Get a List of All Challenge Blueprints
 router.get('/challenges', async (req, res) => {
     try {
-        // We find all challenges that you have marked as 'active'
-        const challenges = await Challenge.find({ isActive: true });
+        const challenges = await Challenge.find({});
         res.status(200).json({ success: true, data: challenges });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error fetching challenges', error: error.message });
+        res.status(500).json({ success: false, message: 'Error fetching challenge blueprints.', error: error.message });
     }
 });
 
+
+// --- STOCK ACCOUNT INVENTORY MANAGEMENT ---
+
+// Add a New MT5 Account to the Inventory
+router.post('/stock-accounts', async (req, res) => {
+    try {
+        const newStockAccount = new StockAccount(req.body);
+        await newStockAccount.save();
+        res.status(201).json({ success: true, message: 'Stock account added to inventory!', data: newStockAccount });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error adding stock account.', error: error.message });
+    }
+});
+
+// Get a List of All Stock Accounts in the Inventory
+router.get('/stock-accounts', async (req, res) => {
+    try {
+        const stockAccounts = await StockAccount.find({});
+        res.status(200).json({ success: true, data: stockAccounts });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching stock accounts.', error: error.message });
+    }
+});
 
 export default router;
