@@ -2,7 +2,7 @@ import express from 'express';
 import Challenge from '../models/Challenge.js';
 import StockAccount from '../models/StockAccount.js';
 import DiscountCode from '../models/DiscountCode.js'; // Import our new model
-import challengeBlueprints from '../config/challengeBlueprints.js'; // Import the blueprints
+import challengeBlueprints from '../config/challengeBlueprints.js'; // Import the blueprints file we will create next
 
 const router = express.Router();
 
