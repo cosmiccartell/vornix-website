@@ -1,54 +1,64 @@
 import express from 'express';
 import Challenge from '../models/Challenge.js';
 import StockAccount from '../models/StockAccount.js';
-// We will add the security guard later. For now, we are building.
+import DiscountCode from '../models/DiscountCode.js'; // Import our new model
+import challengeBlueprints from '../config/challengeBlueprints.js'; // Import the blueprints
 
 const router = express.Router();
 
-// --- CHALLENGE MANAGEMENT ---
-
-// Create a New Challenge Blueprint
-router.post('/challenges', async (req, res) => {
-  try {
-    const newChallenge = new Challenge(req.body);
-    await newChallenge.save();
-    res.status(201).json({ success: true, message: 'Challenge blueprint created successfully!', data: newChallenge });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error creating challenge blueprint.', error: error.message });
-  }
-});
-
-// Get a List of All Challenge Blueprints
-router.get('/challenges', async (req, res) => {
+// --- ONE-TIME SETUP ROUTE ---
+// You will visit this URL ONCE to automatically create all your products.
+router.get('/seed-challenges', async (req, res) => {
     try {
-        const challenges = await Challenge.find({});
-        res.status(200).json({ success: true, data: challenges });
+        // First, delete any old challenge blueprints to avoid duplicates
+        await Challenge.deleteMany({});
+        // Then, insert all the new ones from our blueprints file
+        await Challenge.insertMany(challengeBlueprints);
+        res.status(200).send('Challenge blueprints have been successfully seeded to the database!');
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error fetching challenge blueprints.', error: error.message });
+        res.status(500).send(`Error seeding challenges: ${error.message}`);
     }
 });
 
 
 // --- STOCK ACCOUNT INVENTORY MANAGEMENT ---
-
-// Add a New MT5 Account to the Inventory
 router.post('/stock-accounts', async (req, res) => {
     try {
         const newStockAccount = new StockAccount(req.body);
         await newStockAccount.save();
-        res.status(201).json({ success: true, message: 'Stock account added to inventory!', data: newStockAccount });
+        res.status(201).json({ success: true, message: 'Stock account added!', data: newStockAccount });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error adding stock account.', error: error.message });
     }
 });
 
-// Get a List of All Stock Accounts in the Inventory
 router.get('/stock-accounts', async (req, res) => {
     try {
-        const stockAccounts = await StockAccount.find({});
+        const stockAccounts = await StockAccount.find({}).populate('assignedToUser', 'email');
         res.status(200).json({ success: true, data: stockAccounts });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error fetching stock accounts.', error: error.message });
+        res.status(500).json({ success: false, message: 'Error fetching accounts.' });
+    }
+});
+
+
+// --- DISCOUNT CODE MANAGEMENT ---
+router.post('/discount-codes', async (req, res) => {
+    try {
+        const newDiscountCode = new DiscountCode(req.body);
+        await newDiscountCode.save();
+        res.status(201).json({ success: true, message: 'Discount code created!', data: newDiscountCode });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error creating code.' });
+    }
+});
+
+router.get('/discount-codes', async (req, res) => {
+    try {
+        const discountCodes = await DiscountCode.find({});
+        res.status(200).json({ success: true, data: discountCodes });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching codes.' });
     }
 });
 
