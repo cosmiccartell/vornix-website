@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { networkInterfaces } from "os"; // This is from your original file
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
@@ -30,6 +31,9 @@ app.get("/", (req, res) => {
 
 // Auth API
 app.use("/api/auth", authRoutes);
+
+// Admin API
+app.use('/api/admin', adminRoutes);
 
 // Test Email Route (This is from your original file)
 app.get("/api/test-email", async (req, res) => {
