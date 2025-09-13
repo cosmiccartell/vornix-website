@@ -4,12 +4,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { networkInterfaces } from "os";
 import sendEmail from "./utils/sendEmail.js";
-
-// --- THE FIX: We need to import ALL of our route files ---
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js'; // This was missing
 
 dotenv.config();
 const app = express();
@@ -44,7 +41,6 @@ app.get("/", (req, res) => res.send("Vornix Backend API is running..."));
 app.use("/api/auth", authRoutes);       // Auth engine (Login, Register)
 app.use('/api/admin', adminRoutes);     // Admin engine (Your control panel)
 app.use('/api/public', publicRoutes);   // Public engine (For the Challenges page)
-app.use('/api/payment', paymentRoutes); // Payment engine (For the Checkout page)
 
 
 // Test Email Route
