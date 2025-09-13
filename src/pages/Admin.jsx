@@ -13,7 +13,7 @@ const StockAccountManager = () => {
         const fetchStockAccounts = async () => {
             try {
                 const response = await fetch(`${API_BASE}/api/admin/stock-accounts`);
-                const data = await response.json();
+                const datafgdfgdgdg = await response.json();
                 if (data.success) setStockAccounts(data.data);
             } catch (error) { console.error("Failed to fetch stock accounts"); }
             setLoading(false);
