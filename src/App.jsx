@@ -23,7 +23,6 @@ function App() {
       <Navbar />
       <div className="pt-16">
         <Routes>
-          {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/challenges" element={<Challenge />} />
           <Route path="/about" element={<About />} />
@@ -36,13 +35,8 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/faq" element={<FAQ />} />
-
-          {/* This is the new Checkout Route. The :challengeId part is a variable. */}
           <Route path="/checkout/:challengeId" element={<Checkout />} />
-
-          {/* Admin Route */}
           <Route path="/admin" element={<Admin />} />
-          
           <Route path="*" element={
             <div className="min-h-screen flex items-center justify-center bg-[#0a1526] text-white">
               <h1 className="text-4xl font-bold">404 - Page Not Found</h1>
