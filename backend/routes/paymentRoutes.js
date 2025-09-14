@@ -2,7 +2,7 @@ import express from 'express';
 import Challenge from '../models/Challenge.js';
 import DiscountCode from '../models/DiscountCode.js';
 import Order from '../models/Order.js';
-import authMiddleware from '../middleware/authMiddleware.js'; // We need this to know who the user is
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -70,8 +70,7 @@ router.post('/create-invoice', authMiddleware, async (req, res) => {
         });
         await newOrder.save();
 
-        // --- BTCPay Server Integration ---
-        // For now, we will simulate this process.
+        // --- BTCPay Server Integration (Simulation) ---
         const btcPayInvoiceId = `simulated_${newOrder._id}`;
         newOrder.paymentGatewayInvoiceId = btcPayInvoiceId;
         await newOrder.save();
