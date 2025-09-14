@@ -9,33 +9,26 @@ import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js'; // The new engine
 
 dotenv.config();
 const app = express();
 
-// --- THE FINAL, CORRECT CORS FIX ---
-// This is the "security guard" for your backend.
-// We are now giving it a clear and explicit guest list.
+// --- The Final, Correct CORS Security Guard ---
 const allowedOrigins = [
   'https://vornix-website.vercel.app', // Your live frontend
   'http://localhost:5173'             // Your local PC for testing
 ];
-
 app.use(cors({
   origin: function (origin, callback) {
-    // If the visitor is on our guest list (or is not a browser), let them in.
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      // If they are not on the list, block them.
       callback(new Error('This visitor is not allowed by CORS.'));
     }
   },
   credentials: true,
 }));
-// --- END OF FIX ---
-
 
 app.use(express.json());
 
