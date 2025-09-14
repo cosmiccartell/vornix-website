@@ -14,9 +14,8 @@ router.get('/challenges', async (req, res) => {
     }
 });
 
-// --- THIS IS THE NEW UPGRADE ---
+// --- THIS IS THE CRITICAL UPGRADE ---
 // This new department handles requests for ONE SPECIFIC challenge by its ID.
-// This is what your Checkout page needs.
 router.get('/challenges/:id', async (req, res) => {
     try {
         // First, we check if the ID from the URL is a valid database ID format
