@@ -4,7 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { networkInterfaces } from "os";
 
-// --- All Engines are now imported ---
+// --- All of your "Engines" are now imported ---
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
@@ -14,22 +14,28 @@ import paymentRoutes from './routes/paymentRoutes.js';
 dotenv.config();
 const app = express();
 
-// --- CORS Security Guard ---
-// This is the correct, explicit guest list for your live site.
+// --- THE FINAL, CORRECT CORS FIX ---
+// This is the "security guard" for your backend.
+// We are now giving it a clear and explicit guest list.
 const allowedOrigins = [
   'https://vornix-website.vercel.app', // Your live frontend
   'http://localhost:5173'             // Your local PC for testing
 ];
+
 app.use(cors({
   origin: function (origin, callback) {
+    // If the visitor is on our guest list (or is not a browser), let them in.
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      // If they are not on the list, block them.
       callback(new Error('This visitor is not allowed by CORS.'));
     }
   },
   credentials: true,
 }));
+// --- END OF FIX ---
+
 
 app.use(express.json());
 
@@ -40,7 +46,7 @@ mongoose
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 
-// --- All Engines are now plugged in ---
+// --- All Engines are now correctly plugged in ---
 app.get("/", (req, res) => res.send("Vornix Backend API is running..."));
 app.use("/api/auth", authRoutes);       // Auth engine (Login, Register)
 app.use('/api/admin', adminRoutes);     // Admin engine (Your control panel)
