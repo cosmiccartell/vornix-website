@@ -3,15 +3,19 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import { networkInterfaces } from "os";
+
+// --- All Engines are now imported ---
 import sendEmail from "./utils/sendEmail.js";
 import authRoutes from "./routes/auth.js";
 import adminRoutes from './routes/adminRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 dotenv.config();
 const app = express();
 
 // --- CORS Security Guard ---
+// This is the correct, explicit guest list for your live site.
 const allowedOrigins = [
   'https://vornix-website.vercel.app', // Your live frontend
   'http://localhost:5173'             // Your local PC for testing
@@ -36,14 +40,15 @@ mongoose
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 
-// --- THE FIX: We need to plug in ALL the engines ---
+// --- All Engines are now plugged in ---
 app.get("/", (req, res) => res.send("Vornix Backend API is running..."));
 app.use("/api/auth", authRoutes);       // Auth engine (Login, Register)
 app.use('/api/admin', adminRoutes);     // Admin engine (Your control panel)
 app.use('/api/public', publicRoutes);   // Public engine (For the Challenges page)
+app.use('/api/payment', paymentRoutes); // Payment engine (For the Checkout page)
 
 
-// Test Email Route
+// Test Email Route (from your original file)
 app.get("/api/test-email", async (req, res) => {
   try {
     await sendEmail("someone@example.com", "Hello from Vornix 🚀", "This is a plain test email.", "<h2>Hello from <b>Vornix Prop Firm</b> 🚀</h2>");
@@ -53,7 +58,7 @@ app.get("/api/test-email", async (req, res) => {
   }
 });
 
-// Function to get local IP address
+// Function to get local IP address (from your original file)
 function getLocalIP() {
   const interfaces = networkInterfaces();
   for (const devName in interfaces) {
