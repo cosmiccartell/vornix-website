@@ -3,7 +3,6 @@ import Challenge from '../models/Challenge.js';
 import DiscountCode from '../models/DiscountCode.js';
 import Order from '../models/Order.js';
 import authMiddleware from '../middleware/authMiddleware.js'; // We need this to know who the user is
-import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -20,8 +19,6 @@ router.post('/validate-discount', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Invalid or inactive discount code.' });
         }
         
-        // In the future, you could add more rules here (max uses, expiry date, etc.)
-
         const challenge = await Challenge.findById(challengeId);
         if (!challenge) {
             return res.status(404).json({ success: false, message: 'Challenge not found.' });
@@ -42,7 +39,7 @@ router.post('/validate-discount', authMiddleware, async (req, res) => {
     }
 });
 
-// This engine part creates the invoice and redirects to the payment page
+// This engine part creates the invoice and prepares for payment
 router.post('/create-invoice', authMiddleware, async (req, res) => {
     const { challengeId, discountCode } = req.body;
     const userId = req.user.id;
@@ -54,7 +51,6 @@ router.post('/create-invoice', authMiddleware, async (req, res) => {
         let finalPrice = challenge.priceUpfront || challenge.price;
         let appliedDiscountCode = null;
 
-        // If a discount code was provided, re-validate it and apply it
         if (discountCode) {
             const discount = await DiscountCode.findOne({ code: discountCode.toUpperCase(), isActive: true });
             if (discount) {
@@ -64,7 +60,6 @@ router.post('/create-invoice', authMiddleware, async (req, res) => {
             }
         }
         
-        // Create a new order record in our database
         const newOrder = new Order({
             userId,
             challengeId,
@@ -75,18 +70,13 @@ router.post('/create-invoice', authMiddleware, async (req, res) => {
         });
         await newOrder.save();
 
-        // --- BTCPay Server Integration (The important part!) ---
-        // In a real application, you would make an API call to your BTCPay server here.
-        // That call would return a real invoice ID and a real redirect URL.
+        // --- BTCPay Server Integration ---
         // For now, we will simulate this process.
-        
         const btcPayInvoiceId = `simulated_${newOrder._id}`;
-        // We save the simulated invoice ID to our order
         newOrder.paymentGatewayInvoiceId = btcPayInvoiceId;
         await newOrder.save();
         
-        // We create a simulated redirect URL
-        const redirectUrl = `https://testnet.demo.btcpayserver.org/i/${btcPayInvoiceId}`; // This is just a demo link
+        const redirectUrl = `https://testnet.demo.btcpayserver.org/i/${btcPayInvoiceId}`; // This is a demo link
 
         res.status(200).json({ success: true, redirectUrl });
 
