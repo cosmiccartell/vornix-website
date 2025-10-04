@@ -1,10 +1,10 @@
-import React, { useState, useEffect, Suspense, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas, useLoader } from '@react-three/fiber';
-import { Environment, ContactShadows, OrbitControls, Float } from '@react-three/drei';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Link } from 'react-router-dom';
+
+// NOTE: All 3D imports (Canvas, useLoader, etc.) have been removed to fix the crash.
+// The Hero3D component is replaced by HeroHTMLPlaceholder.
 
 // --- Canonical Data Set (Used by ChallengeCard and Preview) ---
 const CHALLENGE_DATA = [
@@ -68,150 +68,37 @@ export const onStartChallenge = (challenge) => {
   console.log(`[Vornix Checkout] Initiating challenge purchase: ${challenge.challengeType} ${challenge.accountSize}`);
 };
 
-// --- Hero3D Component (Final Stable Version) ---
-const heroUrl = /* @vite-ignore */ new URL('/models/home-hero.glb', import.meta.url).href;
-const heroLowUrl = /* @vite-ignore */ new URL('/models/home-hero-low.glb', import.meta.url).href;
-const fallbackImageUrl = /* @vite-ignore */ new URL('/images/hero-fallback.png', import.meta.url).href;
-
-const lowPower = typeof navigator !== 'undefined' && (navigator.hardwareConcurrency <= 2 || window.innerWidth < 768);
-const modelPath = lowPower ? heroLowUrl : heroUrl;
-
-// Separate component for the PNG fallback image (MUST render outside Canvas)
-const ImageFallback = () => (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <img
-            src={fallbackImageUrl}
-            alt="Decorative fallback image of growth sculpture"
-            className="max-h-full max-w-full object-contain opacity-70"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        />
-    </div>
-);
 
 /**
- * The inner Three.js model component that handles loading and interaction.
- * This component will throw a Promise (on load) or an Error (on network failure).
- * The wrapping Hero3D component handles the visual fallback.
+ * REPLACED 3D COMPONENT: This uses HTML/CSS for a visually similar placeholder
+ * to ensure the page renders without crashing from asset loading.
  */
-function Model() {
-  const group = useRef();
-  const [hovered, setHovered] = useState(false);
-    
-  const gltf = useLoader(GLTFLoader, modelPath);
-
-  useMemo(() => {
-    gltf.scene.traverse((object) => {
-      if (object.isMesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      }
-    });
-  }, [gltf]);
-
-  const scale = hovered ? 1.03 : 1;
-
+function HeroHTMLPlaceholder() {
+  // Uses a simple rotating cube/sphere placeholder using CSS
   return (
-    <Float rotationIntensity={0.25} floatIntensity={0.5}>
-      <motion.group
-        ref={group}
-        scale={scale}
-        transition={{ duration: 0.2 }}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      >
-        <primitive object={gltf.scene} />
-      </motion.group>
-    </Float>
-  );
-}
-
-
-const Loader = () => (
-  <div className="absolute inset-0 flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-t-4 border-[#00d4ff] border-opacity-20 border-t-[#00d4ff] rounded-full animate-spin"></div>
-  </div>
-);
-
-
-/**
- * Outer Hero3D component handles viewport logic and the Canvas/HTML fallback switch.
- * We rely on the parent ErrorBoundary (in App.jsx) to catch Model failures and render the ImageFallback.
- * This component's main job is toggling visibility based on IntersectionObserver.
- */
-function Hero3D() {
-  const [isInViewport, setIsInViewport] = useState(false);
-  const heroRef = useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(() => setIsInViewport(true));
-          } else {
-            setIsInViewport(true);
-          }
-          observer.unobserve(entry.target);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (heroRef.current) {
-      observer.observe(heroRef.current);
-    }
-
-    return () => {
-      if (heroRef.current) {
-        observer.unobserve(heroRef.current);
-      }
-    };
-  }, []);
-
-  // 1. Immediate PNG Fallback for Low Power devices (highest priority)
-  if (lowPower) {
-    return (
-        <div ref={heroRef} className="w-full h-full">
-            <ImageFallback />
-        </div>
-    );
-  }
-  
-  // 2. Loader while waiting for viewport intersection (High Power devices)
-  if (!isInViewport) {
-    return <div ref={heroRef} className="w-full h-full"><Loader /></div>;
-  }
-
-  // 3. Render Canvas once in viewport (High Power devices)
-  return (
-    <div ref={heroRef} className="w-full h-full">
-        <Canvas
-          role="img"
-          aria-hidden="true"
-          camera={{ fov: 35, position: [0, 1.4, 4] }}
-          dpr={[1, 2]}
+    <div className="w-full h-full flex items-center justify-center relative">
+        <p className="sr-only">Decorative 3D hero showing growth sculpture</p>
+        <motion.div
+            className="w-48 h-48 rounded-3xl bg-white/5 border border-[#9b59b6] shadow-2xl"
+            animate={{ 
+                rotateY: 360, 
+                rotateX: [0, 20, 0],
+                scale: [1, 1.05, 1],
+            }}
+            transition={{
+                duration: 10,
+                repeat: Infinity,
+                ease: "linear",
+            }}
         >
-          {/* This Suspense handles the initial loading state (Promise) */}
-          <Suspense fallback={null}> 
-            <directionalLight intensity={1.2} position={[3, 4, 2]} color="#ffffff" castShadow />
-            <pointLight intensity={0.6} position={[-3, 1.5, 2]} color="#9b59b6" />
-            <Environment preset="city" />
-            <ContactShadows position={[0, -0.8, 0]} opacity={0.6} blur={2.5} />
-            <Model />
-            <OrbitControls
-              enablePan={false}
-              enableZoom={false}
-              minPolarAngle={0.6}
-              maxPolarAngle={1.7}
-              autoRotate={true}
-              autoRotateSpeed={0.5}
-            />
-          </Suspense>
-        </Canvas>
+            <div className="w-full h-full flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-[#00d4ff] shadow-lg shadow-[#00d4ff]/50"></div>
+            </div>
+        </motion.div>
     </div>
   );
 }
-// --- End Hero3D Component ---
+// --- End Hero Placeholder Component ---
 
 // --- ChallengeCard, ChallengesPreview, WhyUsSection, Modal, Footer remain the same ---
 
@@ -442,6 +329,7 @@ function FooterSimple() {
 
 /**
  * The main Home Page component. Orchestrates the layout and state.
+ * Uses the HTML placeholder instead of the crashing 3D Canvas.
  */
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -449,7 +337,6 @@ export default function Home() {
   const [selectedChallenge, setSelectedChallenge] = useState(null);
 
   useEffect(() => {
-    // Only handle the initial splash loading state (100ms is enough for component mounting)
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 100); 
@@ -540,8 +427,7 @@ export default function Home() {
               </div>
             </div>
             <div className="relative h-96 md:h-[500px] order-1 md:order-2 w-full md:pl-8">
-              <p className="sr-only">Decorative 3D hero showing growth sculpture</p>
-              <Hero3D /> 
+              <HeroHTMLPlaceholder /> 
             </div>
           </div>
         </section>
