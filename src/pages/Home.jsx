@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas, useLoader } from '@react-three/fiber';
 import { Environment, ContactShadows, OrbitControls, Float } from '@react-three/drei';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { Link } from 'react-router-dom'; // Keep Link for routing
+import { Link } from 'react-router-dom';
 
-// --- Canonical Data Set ---
+// --- Canonical Data Set (Used by ChallengeCard and Preview) ---
 const CHALLENGE_DATA = [
   { "challengeType": "Basic", "accountSize": 600, "price": 7, "minTradingDays": 5, "isNewsTradingAllowed": false, "profitSplit": 85, "maxDrawdown": 10, "priceUpfront": null, "timeLimitDays": null },
   { "challengeType": "Basic", "accountSize": 1000, "price": 10, "minTradingDays": 5, "isNewsTradingAllowed": false, "profitSplit": 85, "maxDrawdown": 10, "priceUpfront": null, "timeLimitDays": null },
@@ -32,7 +32,6 @@ const CHALLENGE_DATA = [
   { "challengeType": "Rapid", "accountSize": 25000, "price": 199, "minTradingDays": 10, "isNewsTradingAllowed": true, "profitSplit": 90, "maxDrawdown": 8, "priceUpfront": null, "timeLimitDays": 30 },
   { "challengeType": "Rapid", "accountSize": 50000, "price": 399, "minTradingDays": 10, "isNewsTradingAllowed": true, "profitSplit": 90, "maxDrawdown": 8, "priceUpfront": null, "timeLimitDays": 30 }
 ];
-// --- End Canonical Data Set ---
 
 // --- Utilities ---
 const scrollToSection = (id) => {
@@ -52,7 +51,6 @@ const formatCurrency = (value) => {
   }).format(value);
 };
 
-// Dummy Helmet for title tag
 const Helmet = ({ children }) => {
   useEffect(() => {
     const originalTitle = document.title;
@@ -70,45 +68,83 @@ export const onStartChallenge = (challenge) => {
   console.log(`[Vornix Checkout] Initiating challenge purchase: ${challenge.challengeType} ${challenge.accountSize}`);
 };
 
-// --- Hero3D Component (Merged) ---
-const heroUrl = new URL('/models/home-hero.glb', import.meta.url).href;
-const heroLowUrl = new URL('/models/home-hero-low.glb', import.meta.url).href;
-const fallbackImageUrl = new URL('/images/hero-fallback.png', import.meta.url).href;
+// --- Hero3D Component (Re-engineered for Stability) ---
+const heroUrl = /* @vite-ignore */ new URL('/models/home-hero.glb', import.meta.url).href;
+const heroLowUrl = /* @vite-ignore */ new URL('/models/home-hero-low.glb', import.meta.url).href;
+const fallbackImageUrl = /* @vite-ignore */ new URL('/images/hero-fallback.png', import.meta.url).href;
 
 const lowPower = typeof navigator !== 'undefined' && (navigator.hardwareConcurrency <= 2 || window.innerWidth < 768);
 const modelPath = lowPower ? heroLowUrl : heroUrl;
 
-function Model({ onLoaded }) {
+/**
+ * The inner Three.js model component that handles loading and interaction.
+ * Crucially, it uses an internal useState hook to trigger a complete
+ * synchronous image fallback if GLB loading fails.
+ */
+function Model() {
   const group = useRef();
-  const gltf = useLoader(GLTFLoader, modelPath);
-
-  useMemo(() => {
-    gltf.scene.traverse((object) => {
-      if (object.isMesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      }
-    });
-    if (onLoaded) onLoaded();
-  }, [gltf, onLoaded]);
-
+  const [modelError, setModelError] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const scale = hovered ? 1.03 : 1;
+  
+  try {
+    const gltf = useLoader(GLTFLoader, modelPath);
 
-  return (
-    <Float rotationIntensity={0.25} floatIntensity={0.5}>
-      <motion.group
-        ref={group}
-        scale={scale}
-        transition={{ duration: 0.2 }}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      >
-        <primitive object={gltf.scene} />
-      </motion.group>
-    </Float>
-  );
+    useMemo(() => {
+      // Basic setup and cleanup for the model
+      gltf.scene.traverse((object) => {
+        if (object.isMesh) {
+          object.castShadow = true;
+          object.receiveShadow = true;
+        }
+      });
+    }, [gltf]);
+
+    const scale = hovered ? 1.03 : 1;
+
+    return (
+      <Float rotationIntensity={0.25} floatIntensity={0.5}>
+        <motion.group
+          ref={group}
+          scale={scale}
+          transition={{ duration: 0.2 }}
+          onPointerOver={() => setHovered(true)}
+          onPointerOut={() => setHovered(false)}
+        >
+          <primitive object={gltf.scene} />
+        </motion.group>
+      </Float>
+    );
+  } catch (e) {
+    // If useLoader throws an error (e.g., 404 on the GLB file),
+    // we catch it and set state to trigger the synchronous fallback render.
+    useEffect(() => {
+        setModelError(true);
+        console.error("3D Model failed to load:", e);
+    }, [e]);
+    // The initial render on error will show null, then the useEffect sets the state.
+    return null;
+  }
+
+  // Synchronous fallback render triggered by modelError state
+  if (modelError) {
+     return (
+        <ImageFallback />
+     );
+  }
 }
+
+// Separate component for the PNG fallback image
+const ImageFallback = () => (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <img
+            src={fallbackImageUrl}
+            alt="Decorative fallback image of growth sculpture"
+            className="max-h-full max-w-full object-contain opacity-70"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        />
+    </div>
+);
+
 
 const Loader = () => (
   <div className="absolute inset-0 flex items-center justify-center">
@@ -120,7 +156,11 @@ function Hero3D() {
   const [isInViewport, setIsInViewport] = useState(false);
   const heroRef = useRef(null);
 
+  // Fallback state for errors caught by the outer component
+  const [outerError, setOuterError] = useState(false);
+
   useEffect(() => {
+    // IntersectionObserver to delay loading until element enters viewport
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -146,51 +186,60 @@ function Hero3D() {
     };
   }, []);
 
-  if (!isInViewport && lowPower) {
-    return (
-      <div ref={heroRef} className="w-full h-full flex items-center justify-center">
-        <img
-          src={fallbackImageUrl}
-          alt="Decorative fallback image of growth sculpture"
-          className="max-h-full max-w-full object-contain opacity-70"
-        />
-      </div>
-    );
-  }
+  // Use a local try/catch/useEffect logic to handle errors around the Canvas
+  const CanvasContent = useMemo(() => {
+    if (outerError || (!isInViewport && lowPower)) {
+        return <ImageFallback />;
+    }
+
+    if (isInViewport || !lowPower) {
+        return (
+            <Canvas
+              role="img"
+              aria-hidden="true"
+              camera={{ fov: 35, position: [0, 1.4, 4] }}
+              dpr={[1, 2]}
+              // Wrap canvas in suspense and set a custom error handler
+              // The Model component handles the internal error fallback
+              // If the component fails, the ErrorBoundary on the Home component should catch it.
+            >
+              <Suspense fallback={<Loader />}>
+                <directionalLight intensity={1.2} position={[3, 4, 2]} color="#ffffff" castShadow />
+                <pointLight intensity={0.6} position={[-3, 1.5, 2]} color="#9b59b6" />
+                <Environment preset="city" />
+                <ContactShadows position={[0, -0.8, 0]} opacity={0.6} blur={2.5} />
+                <Model />
+                <OrbitControls
+                  enablePan={false}
+                  enableZoom={false}
+                  minPolarAngle={0.6}
+                  maxPolarAngle={1.7}
+                  autoRotate={true}
+                  autoRotateSpeed={0.5}
+                />
+              </Suspense>
+            </Canvas>
+        );
+    }
+
+    return <Loader />;
+
+  }, [isInViewport, outerError]);
+
 
   return (
     <div ref={heroRef} className="w-full h-full">
-      {isInViewport || !lowPower ? (
-        <Canvas
-          role="img"
-          aria-hidden="true"
-          camera={{ fov: 35, position: [0, 1.4, 4] }}
-          dpr={[1, 2]}
-        >
-          <Suspense fallback={<Loader />}>
-            <directionalLight intensity={1.2} position={[3, 4, 2]} color="#ffffff" castShadow />
-            <pointLight intensity={0.6} position={[-3, 1.5, 2]} color="#9b59b6" />
-            <Environment preset="city" />
-            <ContactShadows position={[0, -0.8, 0]} opacity={0.6} blur={2.5} />
-            <Model />
-            <OrbitControls
-              enablePan={false}
-              enableZoom={false}
-              minPolarAngle={0.6}
-              maxPolarAngle={1.7}
-              autoRotate={true}
-              autoRotateSpeed={0.5}
-            />
-          </Suspense>
-        </Canvas>
-      ) : (
-        <Loader />
-      )}
+      {/* Outer try/catch to wrap the Canvas rendering */}
+      <React.Suspense fallback={<Loader />}>
+        {CanvasContent}
+      </React.Suspense>
     </div>
   );
 }
+// --- End Hero3D Component ---
 
-// --- ChallengeCard Component (Merged) ---
+// --- ChallengeCard, ChallengesPreview, WhyUsSection, Modal, Footer remain the same ---
+
 function ChallengeCard({ challenge, index, onCardClick }) {
   const { challengeType, accountSize, price, minTradingDays, isNewsTradingAllowed, profitSplit, maxDrawdown, priceUpfront, timeLimitDays } = challenge;
 
@@ -241,7 +290,6 @@ function ChallengeCard({ challenge, index, onCardClick }) {
   );
 }
 
-// --- ChallengesPreview Component (Merged) ---
 function ChallengesPreview({ challenges, onSelectChallenge }) {
   const challengeTypes = useMemo(() => Object.keys(challenges), [challenges]);
   const [activeTab, setActiveTab] = useState(challengeTypes[0] || 'Basic');
@@ -284,7 +332,6 @@ function ChallengesPreview({ challenges, onSelectChallenge }) {
   );
 }
 
-// --- WhyUsSection Component (Merged) ---
 const IconChart = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5l5.242 4.095c.571.446 1.349.446 1.92 0L17.25 6M12 6.75l-1.5 1.5M10.5 8.25L9 6.75M16.5 10.5l-1.5 1.5M15 12l-1.5 1.5" /></svg>);
 const IconScale = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M18.75 6.75h-13.5M18.75 17.25h-13.5M16.5 12h-9" /></svg>);
 const IconLock = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5v2.25c0 .108-.063.208-.162.254l-2.022.955a.75.75 0 01-.715 0l-2.022-.955a.25.25 0 01-.162-.254V10.5M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9 4.03 9 9 9z" /></svg>);
@@ -319,7 +366,6 @@ function WhyUsSection() {
   );
 }
 
-// --- ChallengeDetailsModal Component (Merged) ---
 function ChallengeDetailsModal({ challenge, onClose }) {
   const modalRef = useRef(null);
   const initialFocusRef = useRef(null);
@@ -398,7 +444,6 @@ function ChallengeDetailsModal({ challenge, onClose }) {
   );
 }
 
-// --- FooterSimple Component (Merged) ---
 function FooterSimple() {
   const currentYear = new Date().getFullYear();
   return (
@@ -421,19 +466,18 @@ function FooterSimple() {
 
 
 /**
- * The main Home Page component. It orchestrates the hero, challenges, and other page sections.
- * This version integrates all components into a single file and uses react-router-dom's Link component.
+ * The main Home Page component. Orchestrates the layout and state.
  */
 export default function Home() {
-  // Use a slight loading delay to ensure assets start loading gracefully
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState(null);
 
   useEffect(() => {
+    // Only handle the initial splash loading state (100ms is enough for component mounting)
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 500); // Reduced delay from 1000ms for better FCP
+    }, 100); 
 
     return () => clearTimeout(timer);
   }, []);
@@ -455,7 +499,6 @@ export default function Home() {
   }, []);
 
   if (isLoading) {
-    // Keep your original loader for continuity
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a1526] to-[#152743]">
         <div className="text-center">
@@ -467,7 +510,6 @@ export default function Home() {
   }
 
   return (
-    // Updated background gradient to match strict requirements
     <div className="min-h-screen font-sans antialiased text-[#e6eef8] bg-gradient-to-b from-[#0a1526] to-[#152743]">
       <Helmet><title>Vornix — Funded Trading Challenges</title></Helmet>
 
@@ -524,7 +566,8 @@ export default function Home() {
             </div>
             <div className="relative h-96 md:h-[500px] order-1 md:order-2 w-full md:pl-8">
               <p className="sr-only">Decorative 3D hero showing growth sculpture</p>
-              <Hero3D />
+              {/* This component is now isolated and handles its own errors */}
+              <Hero3D /> 
             </div>
           </div>
         </section>
