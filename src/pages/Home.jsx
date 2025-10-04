@@ -68,7 +68,7 @@ export const onStartChallenge = (challenge) => {
   console.log(`[Vornix Checkout] Initiating challenge purchase: ${challenge.challengeType} ${challenge.accountSize}`);
 };
 
-// --- Hero3D Component (Re-engineered for Stability) ---
+// --- Hero3D Component (Final Stable Version) ---
 const heroUrl = /* @vite-ignore */ new URL('/models/home-hero.glb', import.meta.url).href;
 const heroLowUrl = /* @vite-ignore */ new URL('/models/home-hero-low.glb', import.meta.url).href;
 const fallbackImageUrl = /* @vite-ignore */ new URL('/images/hero-fallback.png', import.meta.url).href;
@@ -76,64 +76,7 @@ const fallbackImageUrl = /* @vite-ignore */ new URL('/images/hero-fallback.png',
 const lowPower = typeof navigator !== 'undefined' && (navigator.hardwareConcurrency <= 2 || window.innerWidth < 768);
 const modelPath = lowPower ? heroLowUrl : heroUrl;
 
-/**
- * The inner Three.js model component that handles loading and interaction.
- * Crucially, it uses an internal useState hook to trigger a complete
- * synchronous image fallback if GLB loading fails.
- */
-function Model() {
-  const group = useRef();
-  const [modelError, setModelError] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  
-  try {
-    const gltf = useLoader(GLTFLoader, modelPath);
-
-    useMemo(() => {
-      // Basic setup and cleanup for the model
-      gltf.scene.traverse((object) => {
-        if (object.isMesh) {
-          object.castShadow = true;
-          object.receiveShadow = true;
-        }
-      });
-    }, [gltf]);
-
-    const scale = hovered ? 1.03 : 1;
-
-    return (
-      <Float rotationIntensity={0.25} floatIntensity={0.5}>
-        <motion.group
-          ref={group}
-          scale={scale}
-          transition={{ duration: 0.2 }}
-          onPointerOver={() => setHovered(true)}
-          onPointerOut={() => setHovered(false)}
-        >
-          <primitive object={gltf.scene} />
-        </motion.group>
-      </Float>
-    );
-  } catch (e) {
-    // If useLoader throws an error (e.g., 404 on the GLB file),
-    // we catch it and set state to trigger the synchronous fallback render.
-    useEffect(() => {
-        setModelError(true);
-        console.error("3D Model failed to load:", e);
-    }, [e]);
-    // The initial render on error will show null, then the useEffect sets the state.
-    return null;
-  }
-
-  // Synchronous fallback render triggered by modelError state
-  if (modelError) {
-     return (
-        <ImageFallback />
-     );
-  }
-}
-
-// Separate component for the PNG fallback image
+// Separate component for the PNG fallback image (MUST render outside Canvas)
 const ImageFallback = () => (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <img
@@ -145,6 +88,43 @@ const ImageFallback = () => (
     </div>
 );
 
+/**
+ * The inner Three.js model component that handles loading and interaction.
+ * This component will throw a Promise (on load) or an Error (on network failure).
+ * The wrapping Hero3D component handles the visual fallback.
+ */
+function Model() {
+  const group = useRef();
+  const [hovered, setHovered] = useState(false);
+    
+  const gltf = useLoader(GLTFLoader, modelPath);
+
+  useMemo(() => {
+    gltf.scene.traverse((object) => {
+      if (object.isMesh) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+      }
+    });
+  }, [gltf]);
+
+  const scale = hovered ? 1.03 : 1;
+
+  return (
+    <Float rotationIntensity={0.25} floatIntensity={0.5}>
+      <motion.group
+        ref={group}
+        scale={scale}
+        transition={{ duration: 0.2 }}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+      >
+        <primitive object={gltf.scene} />
+      </motion.group>
+    </Float>
+  );
+}
+
 
 const Loader = () => (
   <div className="absolute inset-0 flex items-center justify-center">
@@ -152,15 +132,17 @@ const Loader = () => (
   </div>
 );
 
+
+/**
+ * Outer Hero3D component handles viewport logic and the Canvas/HTML fallback switch.
+ * We rely on the parent ErrorBoundary (in App.jsx) to catch Model failures and render the ImageFallback.
+ * This component's main job is toggling visibility based on IntersectionObserver.
+ */
 function Hero3D() {
   const [isInViewport, setIsInViewport] = useState(false);
   const heroRef = useRef(null);
 
-  // Fallback state for errors caught by the outer component
-  const [outerError, setOuterError] = useState(false);
-
   useEffect(() => {
-    // IntersectionObserver to delay loading until element enters viewport
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -186,53 +168,46 @@ function Hero3D() {
     };
   }, []);
 
-  // Use a local try/catch/useEffect logic to handle errors around the Canvas
-  const CanvasContent = useMemo(() => {
-    if (outerError || (!isInViewport && lowPower)) {
-        return <ImageFallback />;
-    }
+  // 1. Immediate PNG Fallback for Low Power devices (highest priority)
+  if (lowPower) {
+    return (
+        <div ref={heroRef} className="w-full h-full">
+            <ImageFallback />
+        </div>
+    );
+  }
+  
+  // 2. Loader while waiting for viewport intersection (High Power devices)
+  if (!isInViewport) {
+    return <div ref={heroRef} className="w-full h-full"><Loader /></div>;
+  }
 
-    if (isInViewport || !lowPower) {
-        return (
-            <Canvas
-              role="img"
-              aria-hidden="true"
-              camera={{ fov: 35, position: [0, 1.4, 4] }}
-              dpr={[1, 2]}
-              // Wrap canvas in suspense and set a custom error handler
-              // The Model component handles the internal error fallback
-              // If the component fails, the ErrorBoundary on the Home component should catch it.
-            >
-              <Suspense fallback={<Loader />}>
-                <directionalLight intensity={1.2} position={[3, 4, 2]} color="#ffffff" castShadow />
-                <pointLight intensity={0.6} position={[-3, 1.5, 2]} color="#9b59b6" />
-                <Environment preset="city" />
-                <ContactShadows position={[0, -0.8, 0]} opacity={0.6} blur={2.5} />
-                <Model />
-                <OrbitControls
-                  enablePan={false}
-                  enableZoom={false}
-                  minPolarAngle={0.6}
-                  maxPolarAngle={1.7}
-                  autoRotate={true}
-                  autoRotateSpeed={0.5}
-                />
-              </Suspense>
-            </Canvas>
-        );
-    }
-
-    return <Loader />;
-
-  }, [isInViewport, outerError]);
-
-
+  // 3. Render Canvas once in viewport (High Power devices)
   return (
     <div ref={heroRef} className="w-full h-full">
-      {/* Outer try/catch to wrap the Canvas rendering */}
-      <React.Suspense fallback={<Loader />}>
-        {CanvasContent}
-      </React.Suspense>
+        <Canvas
+          role="img"
+          aria-hidden="true"
+          camera={{ fov: 35, position: [0, 1.4, 4] }}
+          dpr={[1, 2]}
+        >
+          {/* This Suspense handles the initial loading state (Promise) */}
+          <Suspense fallback={null}> 
+            <directionalLight intensity={1.2} position={[3, 4, 2]} color="#ffffff" castShadow />
+            <pointLight intensity={0.6} position={[-3, 1.5, 2]} color="#9b59b6" />
+            <Environment preset="city" />
+            <ContactShadows position={[0, -0.8, 0]} opacity={0.6} blur={2.5} />
+            <Model />
+            <OrbitControls
+              enablePan={false}
+              enableZoom={false}
+              minPolarAngle={0.6}
+              maxPolarAngle={1.7}
+              autoRotate={true}
+              autoRotateSpeed={0.5}
+            />
+          </Suspense>
+        </Canvas>
     </div>
   );
 }
@@ -566,7 +541,6 @@ export default function Home() {
             </div>
             <div className="relative h-96 md:h-[500px] order-1 md:order-2 w-full md:pl-8">
               <p className="sr-only">Decorative 3D hero showing growth sculpture</p>
-              {/* This component is now isolated and handles its own errors */}
               <Hero3D /> 
             </div>
           </div>
