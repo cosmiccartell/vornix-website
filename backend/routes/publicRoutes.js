@@ -1,39 +1,68 @@
-import express from 'express';
-import Challenge from '../models/Challenge.js';
-import mongoose from 'mongoose'; // We need this for checking the ID format
+import express from "express";
+import Challenge from "../models/Challenge.js";
+import mongoose from "mongoose";
 
 const router = express.Router();
 
-// This is the department you already have: it gets ALL challenges.
-router.get('/challenges', async (req, res) => {
-    try {
-        const challenges = await Challenge.find({ isActive: true }).sort({ accountSize: 1 });
-        res.status(200).json({ success: true, data: challenges });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error fetching challenges' });
-    }
+/*  
+==========================================================
+ FAST PAGINATED CHALLENGES ENDPOINT (INFINITE SCROLL READY)
+==========================================================
+*/
+
+router.get("/challenges", async (req, res) => {
+  const start = Date.now();
+  try {
+    // page = 1, limit = 12 (best for grid)
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 12;
+    const skip = (page - 1) * limit;
+
+    const filter = { isActive: true };
+
+    const projection = [
+      "challengeType",
+      "accountSize",
+      "price",
+      "priceUpfront",
+      "timeLimitDays",
+      "minTradingDays",
+      "maxDrawdown",
+      "profitSplit",
+      "description",
+      "thumbnail",
+      "shortDescription",
+    ].join(" ");
+
+    // Query & count in parallel
+    const [total, challenges] = await Promise.all([
+      Challenge.countDocuments(filter),
+      Challenge.find(filter)
+        .sort({ accountSize: 1 })
+        .select(projection)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return res.status(200).json({
+      success: true,
+      data: challenges,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error("Challenges fetch error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Error fetching challenges" });
+  }
 });
-
-// --- THIS IS THE CRITICAL UPGRADE ---
-// This new department handles requests for ONE SPECIFIC challenge by its ID.
-router.get('/challenges/:id', async (req, res) => {
-    try {
-        // First, we check if the ID from the URL is a valid database ID format
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(404).json({ success: false, message: 'Challenge not found (Invalid ID format)' });
-        }
-
-        const challenge = await Challenge.findById(req.params.id);
-
-        if (!challenge) {
-            return res.status(404).json({ success: false, message: 'Challenge not found in database' });
-        }
-        
-        res.status(200).json({ success: true, data: challenge });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server error fetching challenge details' });
-    }
-});
-// --- END OF UPGRADE ---
 
 export default router;
